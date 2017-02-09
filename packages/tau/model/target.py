@@ -41,7 +41,7 @@ from tau import logger, util
 from tau.error import InternalError, ConfigurationError, IncompatibleRecordError
 from tau.mvc.model import Model
 from tau.model.compiler import Compiler
-from tau.cf.platforms import Architecture, OperatingSystem 
+from tau.cf.platforms import Architecture, OperatingSystem
 from tau.cf.platforms import HOST_ARCH, INTEL_KNC, IBM_BGL, IBM_BGP, IBM_BGQ, HOST_OS, DARWIN, CRAY_CNL
 from tau.cf.compiler import Knowledgebase, InstalledCompilerSet
 from tau.cf.software.tau_installation import TAU_MINIMAL_COMPILERS
@@ -52,8 +52,8 @@ LOGGER = logger.get_logger(__name__)
 def knc_require_k1om(*_):
     """Compatibility checking callback for use with data models.
 
-    Requires that the Intel k1om tools be installed if the host architecture is KNC. 
-        
+    Requires that the Intel k1om tools be installed if the host architecture is KNC.
+
     Raises:
         ConfigurationError: Invalid compiler family specified in target configuration.
     """
@@ -69,10 +69,10 @@ def knc_require_k1om(*_):
 
 def attributes():
     """Construct attributes dictionary for the target model.
-    
+
     We build the attributes in a function so that classes like ``tau.module.project.Project`` are
     fully initialized and usable in the returned dictionary.
-    
+
     Returns:
         dict: Attributes dictionary.
     """
@@ -82,14 +82,14 @@ def attributes():
     from tau.cf.compiler.mpi import MPI_CC, MPI_CXX, MPI_FC, INTEL as INTEL_MPI
     from tau.cf.compiler.shmem import SHMEM_CC, SHMEM_CXX, SHMEM_FC
     from tau.model import require_compiler_family
-    
-    knc_intel_only = require_compiler_family(INTEL, 
+
+    knc_intel_only = require_compiler_family(INTEL,
                                              "You must use Intel compilers to target the Xeon Phi",
                                              "Try adding `--compilers=Intel` to the command line")
     knc_intel_mpi_only = require_compiler_family(INTEL_MPI,
                                                  "You must use Intel MPI compilers to target the Xeon Phi",
                                                  "Try adding `--mpi-compilers=Intel` to the command line")
-    
+
     return {
         'projects': {
             'collection': Project,
@@ -123,7 +123,7 @@ def attributes():
                          'group': 'host',
                          'metavar': '<arch>',
                          'choices': Architecture.keys()},
-            'compat': {str(INTEL_KNC): 
+            'compat': {str(INTEL_KNC):
                        (Target.require('host_arch', knc_require_k1om),
                         Target.require(CC.keyword, knc_intel_only),
                         Target.require(CXX.keyword, knc_intel_only),
@@ -374,19 +374,19 @@ def attributes():
 
 class Target(Model):
     """Target data model."""
-    
+
     __attributes__ = attributes
-    
+
     def __init__(self, *args, **kwargs):
         super(Target, self).__init__(*args, **kwargs)
         self._compilers = None
-        
+
     @classmethod
     def attribute_changed(cls, model, attr, new_value):
         if model.is_selected():
             old_value = model.get(attr, None)
             Target.controller(model.storage).push_to_topic('rebuild_required', {attr: (old_value, new_value)})
-    
+
     def on_update(self):
         from tau.error import ImmutableRecordError
         from tau.model.experiment import Experiment
@@ -403,7 +403,30 @@ class Target(Model):
                 raise ConfigurationError("Changing measurement '%s' in this way will create an invalid condition "
                                          "in experiment '%s':\n    %s." % (self['name'], expr['name'], err),
                                          "Delete experiment '%s' and try again." % expr['name'])
-    
+    def on_create(self):
+        from tau.cf.compiler.host import HOST_COMPILERS
+        for role in HOST_COMPILERS.all_roles():
+            try:
+                record = self.populate(role.keyword)
+            except KeyError:
+                continue
+            path = record['path']
+            script_name = 'tau_%s.sh' % os.path.basename(path)
+            script_path = os.path.join(self.storage.prefix, 'bin', script_name)
+            print script_path
+            #now create a file with script_name that holds
+            #'tau <path> $@'
+            #and place in script_path
+            #1)content
+            buff = 'tau ' + path + ' $@ '
+            print buff
+            #2)open file and written
+            wrapFile = open(script_path,"w")
+            wrapFile.write(buff)
+            wrapFile.close()
+
+
+
     def is_selected(self):
         """Returns True if this target configuration is part of the selected experiment, False otherwise."""
         from tau.model.project import Project, ProjectSelectionError, ExperimentSelectionError
@@ -415,16 +438,16 @@ class Target(Model):
 
     def architecture(self):
         return Architecture.find(self['host_arch'])
-    
+
     def operating_system(self):
         return OperatingSystem.find(self['host_os'])
-    
+
     def sources(self):
         """Get paths to all source packages known to this target.
-        
+
         Returns:
             dict: Software package paths indexed by package name.
-        """ 
+        """
         sources = {}
         for attr in self.attributes:
             if attr.endswith('_source'):
@@ -434,7 +457,7 @@ class Target(Model):
 
     def compilers(self):
         """Get information about the compilers used by this target configuration.
-        
+
         Returns:
             InstalledCompilerSet: Collection of installed compilers used by this target.
         """
@@ -457,21 +480,21 @@ class Target(Model):
 
     def check_compiler(self, compiler_cmd, compiler_args):
         """Checks a compiler command its arguments for compatibility with this target configuration.
-        
-        Checks that the given compiler matches at least one, **but possibly more**, of the compilers 
-        used in the target. Also performs any special checkes for invalid compiler arguments, 
+
+        Checks that the given compiler matches at least one, **but possibly more**, of the compilers
+        used in the target. Also performs any special checkes for invalid compiler arguments,
         e.g. -mmic is only for native KNC.
-        
+
         If the given compiler command and arguments are compatible with this target then information about
         matching compiler installations is returned as a list of n :any:`InstalledCompiler` instances.
-        
+
         Args:
             compiler_cmd (str): The compiler command as passed by the user.
             compiler_args (list): Compiler command line arguments.
-            
+
         Returns:
             list: Information about matching installed compilers as :any:`Compiler` instances.
-            
+
         Raises:
             ConfigurationError: The compiler or command line arguments are incompatible with this target.
         """
@@ -493,7 +516,7 @@ class Target(Model):
                 # Target was not configured with a compiler in this role
                 continue
             compiler_path = compiler_record['path']
-            if (absolute_path and (compiler_path == absolute_path) or 
+            if (absolute_path and (compiler_path == absolute_path) or
                     (not absolute_path and (os.path.basename(compiler_path) == compiler_cmd))):
                 found.append(compiler_record)
             else:
@@ -502,7 +525,7 @@ class Target(Model):
                     compiler_record = compiler_ctrl.one(compiler_record['wrapped'])
                     known_compilers.append(compiler_record.installation())
                     compiler_path = compiler_record['path']
-                    if (absolute_path and (compiler_path == absolute_path) or 
+                    if (absolute_path and (compiler_path == absolute_path) or
                             (not absolute_path and (os.path.basename(compiler_path) == compiler_cmd))):
                         found.append(compiler_record)
                         break
@@ -518,15 +541,15 @@ class Target(Model):
 
     def papi_metrics(self, event_type="PRESET", include_modifiers=False):
         """List PAPI metrics available on this target.
-        
+
         Returns a list of (name, description) tuples corresponding to the
         requested PAPI event type and possibly the event modifiers.
-        
+
         Args:
             event_type (str): Either "PRESET" or "NATIVE".
-            include_modifiers (bool): If True include event modifiers, 
+            include_modifiers (bool): If True include event modifiers,
                                       e.g. BR_INST_EXEC:NONTAKEN_COND as well as BR_INST_EXEC.
-        
+
         Returns:
             list: List of event name/description tuples.
         """
@@ -555,9 +578,9 @@ class Target(Model):
 
     def tau_metrics(self):
         """List TAU metrics available on this target.
-        
+
         Returns a list of (name, description) tuples.
-        
+
         Returns:
             list: List of event name/description tuples.
         """
@@ -591,8 +614,7 @@ class Target(Model):
         elif target_arch is IBM_BGQ:
             metrics.append(("BGQ_TIMERS", "BlueGene/Q high resolution clock."))
         return metrics
-    
+
     def cupti_metrics(self):
         if not self.get('cuda'):
             return []
-        
