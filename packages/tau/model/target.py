@@ -405,6 +405,7 @@ class Target(Model):
                                          "Delete experiment '%s' and try again." % expr['name'])
     def on_create(self):
         from tau.cf.compiler.host import HOST_COMPILERS
+        import subprocess
         for role in HOST_COMPILERS.all_roles():
             try:
                 record = self.populate(role.keyword)
@@ -412,22 +413,20 @@ class Target(Model):
                 continue
             path = record['path']
             script_name = 'tau_%s.sh' % os.path.basename(path)
-            script_dir=os.path.join(self.storage.prefix, 'bin',)
-            script_Fullpath = os.path.join(self.storage.prefix, 'bin',          script_name)
-            print script_Fullpath
-            #now create a file with script_name that holds
-            #'tau <path> $@'
-            #and place in script_path
-            #1)content
+            pre = self.storage.prefix
+            print pre
+            print os.path.isdir(self.storage.prefix)
+            print subprocess.check_output(['ls','-ltr',pre])
+            print subprocess.check_output(['ls','-ltr'])
+            #script_dir=os.path.join(self.storage.prefix, 'bin',)
+            script_dir=os.path.join(self.storage.prefix + "scripts")
+            script_Fullpath = os.path.join(script_dir,script_name)
             buff = 'tau ' + path + ' $@ '
-            #2)open file and written
-            if not os.path.exists(str(self.storage.prefix))
-                os.makedirs(str(self.storage.prefix))
-            if not os.path.exists(str(script_dir)):
-                os.makedirs(str(script_dir))
-            wrapFile = open(str(script_Fullpath),"w")
-            wrapFile.write(buff)
-            wrapFile.close()
+            #if not os.path.exists(script_dir):
+            #os.makedirs(script_dir)
+            # wrapFile = open(str(script_Fullpath),"w")
+            # wrapFile.write(buff)
+            # wrapFile.close()
 
 
 
