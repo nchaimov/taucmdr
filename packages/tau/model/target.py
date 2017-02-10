@@ -412,16 +412,20 @@ class Target(Model):
                 continue
             path = record['path']
             script_name = 'tau_%s.sh' % os.path.basename(path)
-            script_path = os.path.join(self.storage.prefix, 'bin', script_name)
-            print script_path
+            script_dir=os.path.join(self.storage.prefix, 'bin',)
+            script_Fullpath = os.path.join(self.storage.prefix, 'bin',          script_name)
+            print script_Fullpath
             #now create a file with script_name that holds
             #'tau <path> $@'
             #and place in script_path
             #1)content
             buff = 'tau ' + path + ' $@ '
-            print buff
             #2)open file and written
-            wrapFile = open(script_path,"w")
+            if not os.path.exists(str(self.storage.prefix))
+                os.makedirs(str(self.storage.prefix))
+            if not os.path.exists(str(script_dir)):
+                os.makedirs(str(script_dir))
+            wrapFile = open(str(script_Fullpath),"w")
             wrapFile.write(buff)
             wrapFile.close()
 
