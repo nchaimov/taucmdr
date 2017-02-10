@@ -418,18 +418,15 @@ class Target(Model):
 	    try: 
 	    	os.makedirs(script_dir)
 	    except OSError:
-	        if not os.path.isdir(script_dir):
-		    print "THERE IS NO ", script_dir
-       		    #raise
+    		if not os.path.isdir(script_dir):
+        	    raise
 		
             script_Fullpath = os.path.join(script_dir,script_name)
             buff = 'tau ' + path + ' $@ '
  	    try:
             	wrapFile = open(str(script_Fullpath),"w")
 	    except IOError as e:
-		print e.errno
-    		print e.filename
-    		print e.strerror
+		 print "I/O error({0}): {1}".format(e.errno, e.strerror)
             wrapFile.write(buff)
             wrapFile.close()
 
