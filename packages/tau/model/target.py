@@ -414,19 +414,24 @@ class Target(Model):
             path = record['path']
             script_name = 'tau_%s.sh' % os.path.basename(path)
             pre = self.storage.prefix
-            print pre
-            print os.path.isdir(self.storage.prefix)
-            print subprocess.check_output(['ls','-ltr',pre])
-            print subprocess.check_output(['ls','-ltr'])
-            #script_dir=os.path.join(self.storage.prefix, 'bin',)
-            script_dir=os.path.join(self.storage.prefix + "scripts")
+            script_dir=os.path.join(self.storage.prefix, 'bin',)
+	    try: 
+	    	os.makedirs(script_dir)
+	    except OSError:
+	        if not os.path.isdir(script_dir):
+		    print "THERE IS NO ", script_dir
+       		    #raise
+		
             script_Fullpath = os.path.join(script_dir,script_name)
             buff = 'tau ' + path + ' $@ '
-            #if not os.path.exists(script_dir):
-            #os.makedirs(script_dir)
-            # wrapFile = open(str(script_Fullpath),"w")
-            # wrapFile.write(buff)
-            # wrapFile.close()
+ 	    try:
+            	wrapFile = open(str(script_Fullpath),"w")
+	    except IOError as e:
+		print e.errno
+    		print e.filename
+    		print e.strerror
+            wrapFile.write(buff)
+            wrapFile.close()
 
 
 
