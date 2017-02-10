@@ -404,6 +404,7 @@ class Target(Model):
                                          "in experiment '%s':\n    %s." % (self['name'], expr['name'], err),
                                          "Delete experiment '%s' and try again." % expr['name'])
     def on_create(self):
+	""" Installs wrapper scripts for use in CMake """
         from tau.cf.compiler.host import HOST_COMPILERS
         import subprocess
         for role in HOST_COMPILERS.all_roles():
@@ -413,8 +414,8 @@ class Target(Model):
                 continue
             path = record['path']
             script_name = 'tau_%s.sh' % os.path.basename(path)
-            pre = self.storage.prefix
             script_dir=os.path.join(self.storage.prefix, 'bin',)
+	    #script_dir=u'/work/02463/srinathv/taucmdr/script_dir'
 	    try: 
 	    	os.makedirs(script_dir)
 	    except OSError:
@@ -422,7 +423,7 @@ class Target(Model):
         	    raise
 		
             script_Fullpath = os.path.join(script_dir,script_name)
-            buff = 'tau ' + path + ' $@ '
+            buff = 'tau ' + path + ' $@ \n'
  	    try:
             	wrapFile = open(str(script_Fullpath),"w")
 	    except IOError as e:
